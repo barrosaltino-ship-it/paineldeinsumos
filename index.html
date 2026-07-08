@@ -868,7 +868,7 @@ tr:hover td.sticky-col{background:var(--surface2)}
         <div class="alert-icon">💡</div>
         <div class="alert-title">Como usar</div>
         <div class="alert-items">
-          <div class="alert-item">Encontre o produto, informe a <strong>quantidade</strong> a destinar e o <strong>cooperado</strong> (autocomplete com a lista oficial), depois clique em "Adicionar".</div>
+          <div class="alert-item">Encontre o produto, informe a <strong>quantidade</strong> a destinar, o <strong>cooperado</strong> (autocomplete com a lista oficial) e a <strong>forma de pagamento</strong> (💳 Boleto ou 🔄 Troca), depois clique em "Adicionar".</div>
           <div class="alert-item">O estoque disponível é atualizado na hora, e o sistema já mostra o preço mínimo para atingir a margem-alvo por classe ABC (A 10% · B 15% · C 22%).</div>
           <div class="alert-item">Se o cooperado estiver devendo à cooperativa, um aviso aparece antes de confirmar a distribuição.</div>
           <div class="alert-item">Tudo fica salvo no navegador. Use "Exportar (CSV)" para gerar um arquivo com o histórico.</div>
@@ -911,6 +911,7 @@ tr:hover td.sticky-col{background:var(--surface2)}
               <th style="text-align:right">Preço p/ Meta de Margem</th>
               <th style="text-align:center">Qtd a Destinar</th>
               <th style="text-align:center">Cooperado</th>
+              <th style="text-align:center">Pagamento</th>
               <th style="text-align:center">Ação</th>
             </tr>
           </thead>
@@ -947,6 +948,7 @@ tr:hover td.sticky-col{background:var(--surface2)}
               <th style="text-align:right">Valor Baixado (Custo)</th>
               <th style="text-align:right">Preço p/ Meta de Margem</th>
               <th style="text-align:right">Valor a Cobrar</th>
+              <th style="text-align:center">Pagamento</th>
               <th style="text-align:center">Ação</th>
             </tr>
           </thead>
@@ -2024,13 +2026,17 @@ function atualizarMetricsDist(){
   const itensZerados = Object.values(ESTOQUE_DISPONIVEL_DIST).filter(v=>v<=0.001).length;
   const coopsDevendo = COOPERADOS.filter(c=>c.saldo>0.01).length;
   const totalBaixadoCusto = DISTRIBUICOES.reduce((s,d)=>s+(d.valorCusto||0),0);
+  const totalBoleto = DISTRIBUICOES.filter(d=>(d.pagamento||'Boleto')==='Boleto').reduce((s,d)=>s+(d.valorSugerido||0),0);
+  const totalTroca = DISTRIBUICOES.filter(d=>d.pagamento==='Troca').reduce((s,d)=>s+(d.valorSugerido||0),0);
+  document.getElementById('metrics-dist').style.gridTemplateColumns = 'repeat(7,1fr)';
   document.getElementById('metrics-dist').innerHTML = `
     <div class="metric teal"><div class="metric-lbl">Produtos em estoque</div><div class="metric-val">${totalItens}</div><div class="metric-sub">Saldo atualizado em 06/07/2026</div></div>
     <div class="metric blue"><div class="metric-lbl">Valor total em estoque</div><div class="metric-val">${fmtK(totalValor)}</div><div class="metric-sub">A custo médio de reposição</div></div>
     <div class="metric green"><div class="metric-lbl">Distribuições registradas</div><div class="metric-val">${totalDistribuido}</div><div class="metric-sub">${coopsUnicos} cooperado(s) atendido(s)</div></div>
     <div class="metric amber"><div class="metric-lbl">Itens totalmente distribuídos</div><div class="metric-val">${itensZerados}</div><div class="metric-sub">Saldo disponível chegou a zero</div></div>
     <div class="metric red"><div class="metric-lbl">Cooperados devendo</div><div class="metric-val">${coopsDevendo}</div><div class="metric-sub">de ${COOPERADOS.length} cadastrados</div></div>
-    <div class="metric purple"><div class="metric-lbl">Valor já baixado (custo)</div><div class="metric-val">${fmtK(totalBaixadoCusto)}</div><div class="metric-sub">Total distribuído a custo</div></div>`;
+    <div class="metric purple"><div class="metric-lbl">Valor já baixado (custo)</div><div class="metric-val">${fmtK(totalBaixadoCusto)}</div><div class="metric-sub">Total distribuído a custo</div></div>
+    <div class="metric blue"><div class="metric-lbl">💳 Boleto vs 🔄 Troca</div><div class="metric-val" style="font-size:15px">${fmtK(totalBoleto)} / ${fmtK(totalTroca)}</div><div class="metric-sub">Valor a cobrar por forma de pagamento</div></div>`;
 }
 
 function filtrarDist(tipo, valor, btn){
@@ -2081,9 +2087,15 @@ function renderDist(){
       <td class="td-r" style="font-weight:700;color:var(--green-text)">R$${p.precoSugerido.toLocaleString('pt-BR',{maximumFractionDigits:2})}<div style="font-size:9px;color:var(--text3);font-weight:400">margem ${p.margemSugerida.toFixed(1)}%</div></td>
       <td class="td-c"><input type="text" inputmode="decimal" class="qty-input" id="qtd-dist-${p.cod}" placeholder="0" ${zerado?'disabled':''}></td>
       <td class="td-c"><input type="text" class="coop-input" id="coop-dist-${p.cod}" placeholder="Nome do cooperado" list="lista-cooperados" ${zerado?'disabled':''}></td>
+      <td class="td-c">
+        <select class="search-input" id="pgto-dist-${p.cod}" style="min-width:110px;padding:6px 8px;font-size:11px" ${zerado?'disabled':''}>
+          <option value="Boleto">💳 Boleto</option>
+          <option value="Troca">🔄 Troca</option>
+        </select>
+      </td>
       <td class="td-c"><button class="btn-add" onclick="adicionarDistribuicao('${p.cod}')" ${zerado?'disabled':''}>+ Adicionar</button></td>
     </tr>`;
-  }).join('') || `<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:24px">Nenhum produto encontrado.</td></tr>`;
+  }).join('') || `<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:24px">Nenhum produto encontrado.</td></tr>`;
 }
 
 function adicionarDistribuicao(cod){
@@ -2091,8 +2103,10 @@ function adicionarDistribuicao(cod){
   if(!p) return;
   const qtdInput = document.getElementById('qtd-dist-'+cod);
   const coopInput = document.getElementById('coop-dist-'+cod);
+  const pgtoInput = document.getElementById('pgto-dist-'+cod);
   const qtd = parseFloat((qtdInput.value||'').replace(',','.'));
   let cooperadoRaw = (coopInput.value||'').trim();
+  const pagamento = pgtoInput ? pgtoInput.value : 'Boleto';
 
   if(!cooperadoRaw){ alert('Informe o nome do cooperado antes de adicionar.'); coopInput.focus(); return; }
   if(isNaN(qtd) || qtd<=0){ alert('Informe uma quantidade válida.'); qtdInput.focus(); return; }
@@ -2123,7 +2137,7 @@ function adicionarDistribuicao(cod){
 
   DISTRIBUICOES.push({
     ts: new Date().toLocaleString('pt-BR'),
-    cooperado, cod, desc:p.desc, um:p.um, qtd,
+    cooperado, cod, desc:p.desc, um:p.um, qtd, pagamento,
     custoUnit: p.custoAtual, valorCusto: valorBaixaCusto,
     precoSugerido: p.precoSugerido, margemSugerida: p.margemSugerida, valorSugerido: valorSugeridoVenda,
   });
@@ -2138,7 +2152,8 @@ function adicionarDistribuicao(cod){
   alert(
     `✅ Distribuição registrada!\n\n` +
     `Produto: ${p.desc}\n` +
-    `Cooperado: ${cooperado}\n\n` +
+    `Cooperado: ${cooperado}\n` +
+    `Forma de pagamento: ${pagamento==='Troca'?'🔄 Troca':'💳 Boleto'}\n\n` +
     `📉 Baixa no estoque: ${qtd.toLocaleString('pt-BR',{maximumFractionDigits:1})} ${p.um}\n` +
     `💰 Valor baixado (a custo): ${fmtBRL(valorBaixaCusto)}\n\n` +
     `💵 Preço a cobrar para atingir a margem-alvo: R$${p.precoSugerido.toLocaleString('pt-BR',{maximumFractionDigits:2})}/${p.um} (margem ${p.margemSugerida.toFixed(1)}%)\n` +
@@ -2173,10 +2188,12 @@ function limparDistribuicao(){
 function renderDistribuicoesHist(){
   const tbody = document.getElementById('tbody-dist-historico');
   if(DISTRIBUICOES.length===0){
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:24px">Nenhuma distribuição registrada ainda.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:24px">Nenhuma distribuição registrada ainda.</td></tr>`;
   } else {
-    tbody.innerHTML = DISTRIBUICOES.map((d,i)=>({d,i})).slice().reverse().map(({d,i})=>`
-      <tr>
+    tbody.innerHTML = DISTRIBUICOES.map((d,i)=>({d,i})).slice().reverse().map(({d,i})=>{
+      const pgto = d.pagamento || 'Boleto';
+      const pgtoBadge = pgto==='Troca' ? `<span class="badge badge-amber">🔄 Troca</span>` : `<span class="badge badge-blue">💳 Boleto</span>`;
+      return `<tr>
         <td style="font-size:11px;color:var(--text3)">${d.ts}</td>
         <td style="font-weight:600">${d.cooperado}</td>
         <td>${d.desc}<div class="prod-cod">${d.cod}</div></td>
@@ -2185,8 +2202,10 @@ function renderDistribuicoesHist(){
         <td class="td-r">${d.valorCusto!=null?fmtBRL(d.valorCusto):'—'}</td>
         <td class="td-r">${d.precoSugerido!=null?'R$'+d.precoSugerido.toLocaleString('pt-BR',{maximumFractionDigits:2})+' <span style="font-size:9px;color:var(--text3)">('+d.margemSugerida.toFixed(1)+'%)</span>':'—'}</td>
         <td class="td-r" style="font-weight:700;color:var(--green-text)">${d.valorSugerido!=null?fmtBRL(d.valorSugerido):'—'}</td>
+        <td class="td-c">${pgtoBadge}</td>
         <td class="td-c"><button class="btn-remove" onclick="removerDistribuicao(${i})" title="Remover">✕ remover</button></td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
   }
 
   const resumo = {};
@@ -2209,9 +2228,9 @@ function renderDistribuicoesHist(){
 
 function exportarDistribuicao(){
   if(DISTRIBUICOES.length===0){ alert('Nenhuma distribuição registrada ainda.'); return; }
-  let csv = 'Data/Hora;Cooperado;Codigo;Produto;Unidade;Quantidade;ValorCusto;PrecoSugerido;ValorACobrar\n';
+  let csv = 'Data/Hora;Cooperado;Codigo;Produto;Unidade;Quantidade;ValorCusto;PrecoSugerido;ValorACobrar;FormaPagamento\n';
   DISTRIBUICOES.forEach(d=>{
-    csv += `${d.ts};${d.cooperado};${d.cod};${d.desc};${d.um};${d.qtd.toString().replace('.',',')};${(d.valorCusto||0).toString().replace('.',',')};${(d.precoSugerido||0).toString().replace('.',',')};${(d.valorSugerido||0).toString().replace('.',',')}\n`;
+    csv += `${d.ts};${d.cooperado};${d.cod};${d.desc};${d.um};${d.qtd.toString().replace('.',',')};${(d.valorCusto||0).toString().replace('.',',')};${(d.precoSugerido||0).toString().replace('.',',')};${(d.valorSugerido||0).toString().replace('.',',')};${d.pagamento||'Boleto'}\n`;
   });
   const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
